@@ -1,1 +1,2 @@
-一个简单的脚手架Spring Boot + MyBatis + thymeleaf
+# Spring Boot + MyBatis + thymeleaf整合的一个小项目
+
