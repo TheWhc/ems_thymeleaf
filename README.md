@@ -1,0 +1,740 @@
+# 整合SpringBoot + MyBatis + Themyleaf小项目实战
+
+# 一、项目环境搭建①
+
+- 创建SpringBoot项目
+
+  ![image-20210515161105270](https://gitee.com/wu_hc/note_images/raw/master/img/20210515213729.png)
+
+- 选择对应的依赖
+
+  (lombok + web + thymeleaf + mysql driver)
+
+  ![image-20210515161214913](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214230.png)
+
+- 目录结构
+
+  ![image-20210515163909094](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214220.png)
+
+- 修改`ems_thymeleaf.pom`文件
+
+  - 引入mybatis、druid依赖
+
+    ```properties
+    <!--mybatis-->
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>2.1.1</version>
+    </dependency>
+    
+    <!--druid-->
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>druid</artifactId>
+        <version>1.1.19</version>
+    </dependency>
+    ```
+
+- 修改`application.properties`
+
+  ```properties
+  # 应用名称
+  spring.application.name=ems_thymeleaf
+  server.servlet.context-path=/ems
+  # 应用服务 WEB 访问端口
+  server.port=8080
+  # 数据库驱动：# MySQL6以上用com.mysql.cj.jdbc.Driver (自己是5.7版本,如果是6以上版本需要注意连接地址配置还需要加上时区配置)
+  spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+  # 数据库类型
+  spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+  # 数据库连接地址
+  spring.datasource.url=jdbc:mysql://localhost:3306/ems_thymeleaf?useUnicode=true&characterEncoding=utf8&useSSL=false
+  # 数据库用户名&密码：
+  spring.datasource.username=root
+  spring.datasource.password=root
+  # THYMELEAF (ThymeleafAutoConfiguration)
+  # 开启模板缓存（默认值： true ）
+  spring.thymeleaf.cache=true
+  # 检查模板是否存在，然后再呈现
+  spring.thymeleaf.check-template=true
+  # 检查模板位置是否正确（默认值 :true ）
+  spring.thymeleaf.check-template-location=true
+  #Content-Type 的值（默认值： text/html ）
+  spring.thymeleaf.content-type=text/html
+  # 开启 MVC Thymeleaf 视图解析（默认值： true ）
+  spring.thymeleaf.enabled=true
+  # 模板编码
+  spring.thymeleaf.encoding=UTF-8
+  # 要被排除在解析之外的视图名称列表，⽤逗号分隔
+  spring.thymeleaf.excluded-view-names=
+  # 要运⽤于模板之上的模板模式。另⻅ StandardTemplate-ModeHandlers( 默认值： HTML5)
+  spring.thymeleaf.mode=HTML5
+  # 在构建 URL 时添加到视图名称前的前缀（默认值： classpath:/templates/ ）
+  spring.thymeleaf.prefix=classpath:/templates/
+  # 在构建 URL 时添加到视图名称后的后缀（默认值： .html ）
+  spring.thymeleaf.suffix=.html
+  
+  mybatis.mapper-locations=classpath:/com/whc/mapper/*.xml
+  mybatis.type-aliases-package=com.whc.entity
+  spring.resources.static-locations=classpath:/templates/,classpath:/static/
+  ```
+
+- 修改`EmsThymeleafApplication.java`
+
+  ```java
+  @SpringBootApplication
+  @MapperScan("com.whc.dao") // 扫描com.whc.dao下的所有mapper类作为Mapper映射文件
+  public class EmsThymeleafApplication {
+  
+  	public static void main(String[] args) {
+  		SpringApplication.run(EmsThymeleafApplication.class, args);
+  	}
+  
+  }
+  ```
+
+# 二、数据库表设计及项目环境②
+
+需求分析:
+
+- 用户
+  - 用户登录
+  - 用户注册、先生成验证码
+- 员工
+  - 增删改查功能
+
+
+
+分析库表结构:
+
+- 用户表 t_user
+  - 属性 id、username、realname、password、sex
+- 员工表 t_emp
+  - 属性 id、name、salary、age、bir
+
+
+
+数据库创建表
+
+- 新建数据库
+
+  ![image-20210515164529308](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214231.png)
+
+- 新建表
+
+  ```mysql
+  create table t_user(
+  	id varchar(40) primary key, -- id
+  	username varchar(40),  -- 用户名
+  	realname varchar(40),  -- 真实名称
+  	password varchar(40),  -- 密码
+  	sex varchar(8)  -- 性别
+  );
+  
+  create table t_emp(
+  	id varchar(40) primary key, 
+    name varchar(40), -- 姓名
+  	salary varchar(40), -- 薪资
+  	age int(3), -- 年龄
+  	bir date -- 生日
+  );
+  ```
+
+
+
+项目环境
+
+- 引入对应的资源文件
+
+  ![image-20210515165358316](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214232.png)
+
+- 编写`IndexController`
+
+  默认情况下template中的静态页面无法直接通过URL访问，需要通过controller的跳转，定义映射之后，可以将直接访问的URL映射成类似controller的跳转功能。
+
+  ```java
+  @Controller
+  public class IndexController {
+  
+  	@GetMapping("/index")
+  	public String toIndex() {
+  		return "ems/login";
+  	}
+  }
+  ```
+
+- 启动项目，访问`localhost:8080/ems/index`
+
+  - 跳转登录页面
+
+    ![image-20210515171500310](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214233.png)
+
+  - 跳转注册页面
+
+    ```java
+    @GetMapping("/toRegister")
+    	public String toRegister() {
+    		return "ems/regist";
+    	}
+    ```
+
+    
+
+# 三、图片验证码功能
+
+- 验证码工具类`ValidateImageCodeUtils.java`
+
+  ```java
+  public class ValidateImageCodeUtils {
+      /**
+       * 验证码难度级别 Simple-数字 Medium-数字和小写字母 Hard-数字和大小写字母
+       */
+      public enum SecurityCodeLevel {
+          Simple, Medium, Hard
+      }
+  
+      ;
+  
+      /**
+       * 产生默认验证码，4位中等难度
+       *
+       * @return
+       */
+      public static String getSecurityCode() {
+          return getSecurityCode(4, SecurityCodeLevel.Medium, false);
+      }
+  
+      /**
+       * 产生长度和难度任意的验证码
+       *
+       * @param length
+       * @param level
+       * @param isCanRepeat
+       * @return
+       */
+      public static String getSecurityCode(int length, SecurityCodeLevel level, boolean isCanRepeat) {
+          // 随机抽取len个字符
+          int len = length;
+          // 字符集合（--除去易混淆的数字0,1,字母l,o,O）
+          char[] codes = {
+                  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+          };
+          // 根据不同难度截取字符串
+          if (level == SecurityCodeLevel.Simple) {
+              codes = Arrays.copyOfRange(codes, 0, 10);
+          } else if (level == SecurityCodeLevel.Medium) {
+              codes = Arrays.copyOfRange(codes, 0, 36);
+          }
+          // 字符集和长度
+          int n = codes.length;
+          // 抛出运行时异常
+          if (len > n && isCanRepeat == false) {
+              throw new RuntimeException(String.format("调用SecurityCode.getSecurityCode(%1$s,%2$s,%3$s)出现异常，" + "当isCanRepeat为%3$s时，传入参数%1$s不能大于%4$s", len, level, isCanRepeat, n));
+          }
+          // 存放抽取出来的字符
+          char[] result = new char[len];
+          // 判断能否出现重复字符
+          if (isCanRepeat) {
+              for (int i = 0; i < result.length; i++) {
+                  // 索引0 and n-1
+                  int r = (int) (Math.random() * n);
+                  // 将result中的第i个元素设置为code[r]存放的数值
+                  result[i] = codes[r];
+              }
+          } else {
+              for (int i = 0; i < result.length; i++) {
+                  // 索引0 and n-1
+                  int r = (int) (Math.random() * n);
+                  // 将result中的第i个元素设置为code[r]存放的数值
+                  result[i] = codes[r];
+                  // 必须确保不会再次抽取到那个字符，这里用数组中最后一个字符改写code[r],并将n-1
+                  codes[r] = codes[n - 1];
+                  n--;
+              }
+          }
+          return String.valueOf(result);
+      }
+  
+      /**
+       * 生成验证码图片
+       *
+       * @param securityCode
+       * @return
+       */
+      public static BufferedImage createImage(String securityCode) {
+  
+          int codeLength = securityCode.length();//验证码长度
+  
+          int fontSize = 18;//字体大小
+  
+          int fontWidth = fontSize + 1;
+  
+          //图片宽高
+  
+          int width = codeLength * fontWidth + 6;
+          int height = fontSize * 2 + 1;
+          //图片
+  
+          BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+  
+          Graphics2D g = image.createGraphics();
+  
+          g.setColor(Color.WHITE);//设置背景色
+  
+          g.fillRect(0, 0, width, height);//填充背景
+  
+          g.setColor(Color.LIGHT_GRAY);//设置边框颜色
+  
+          g.setFont(new Font("Arial", Font.BOLD, height - 2));//边框字体样式
+  
+          g.drawRect(0, 0, width - 1, height - 1);//绘制边框
+  
+          //绘制噪点
+  
+          Random rand = new Random();
+  
+          g.setColor(Color.LIGHT_GRAY);
+  
+          for (int i = 0; i < codeLength * 6; i++) {
+  
+              int x = rand.nextInt(width);
+  
+              int y = rand.nextInt(height);
+  
+              g.drawRect(x, y, 1, 1);//绘制1*1大小的矩形
+  
+          }
+  
+          //绘制验证码
+  
+          int codeY = height - 10;
+  
+          g.setColor(new Color(19, 148, 246));
+  
+          g.setFont(new Font("Georgia", Font.BOLD, fontSize));
+          for (int i = 0; i < codeLength; i++) {
+              double deg = new Random().nextDouble() * 20;
+              g.rotate(Math.toRadians(deg), i * 16 + 13, codeY - 7.5);
+              g.drawString(String.valueOf(securityCode.charAt(i)), i * 16 + 5, codeY);
+              g.rotate(Math.toRadians(-deg), i * 16 + 13, codeY - 7.5);
+          }
+  
+          g.dispose();//关闭资源
+          return image;
+      }
+  
+      public static void main(String[] args) throws IOException {
+          String securityCode = ValidateImageCodeUtils.getSecurityCode();
+          System.out.println(securityCode);
+  
+          BufferedImage image = ValidateImageCodeUtils.createImage(securityCode);
+          ImageIO.write(image, "png", new FileOutputStream("aa.png"));
+      }
+  
+  
+  }
+  ```
+
+  
+
+- `UserController` 控制类
+
+  ```java
+  @Controller
+  @RequestMapping("/user")
+  public class UserController {
+  
+  	/**
+  	 * 生成验证码
+  	 *
+  	 * @param session
+  	 * @param response
+  	 * @throws IOException
+  	 */
+  	@GetMapping("/code")
+  	public void getVerification(HttpSession session, HttpServletResponse response) throws IOException {
+  		//生成验证码
+  		String securityCode = ValidateImageCodeUtils.getSecurityCode();
+  		BufferedImage image = ValidateImageCodeUtils.createImage(securityCode);
+  		//存入session中
+  		session.setAttribute("code", securityCode);
+  		//响应图片
+  		ServletOutputStream os = response.getOutputStream();
+  		ImageIO.write(image, "png", os);
+  	}
+  }
+  
+  ```
+
+- 测试
+
+  ![image-20210515172523234](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214234.png)
+
+- 改写前端注册代码
+
+  ```html
+  <tr>
+      <td valign="middle" align="right">
+          验证码:
+          <img id="num" th:src="@{/user/code}"/>
+          <a href="javascript:;"
+          onclick="document.getElementById('num').src = '/ems/user/code?'+(new Date()).getTime()">换一张</a>
+      </td>
+      <td valign="middle" align="left">
+   	   <input type="text" class="inputgri" name="code"/>
+      </td>
+  </tr>
+  ```
+
+- 前端界面测试
+
+  ![image-20210515172707518](https://gitee.com/wu_hc/note_images/raw/master/img/20210515214235.png)
+
+# 四、用户注册功能
+
+- 编写User.java
+
+  ```java
+  @Data
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public class User {
+  	private String id;
+  	private String username;
+  	private String realname;
+  	private String password;
+  	private String sex;
+  }
+  ```
+
+- UserController
+
+  ```java
+  @Autowired
+  	private UserService userService;
+  
+  // 注册方法
+  @PostMapping("/register")
+  public String register(User user, String code, HttpSession session) {
+      String sessionCode = (String)session.getAttribute("code");
+      if(sessionCode.equalsIgnoreCase(code)) {
+          userService.register(user);
+          return "redirect:/index"; // 跳转到登录页面
+      } else {
+          return "redirect:/toRegister"; // 跳转登录页面
+      }
+  }
+  ```
+
+- UserService
+
+  ```java
+  public interface UserService {
+  	void register(User user);
+  }
+  ```
+
+  - UserServiceImpl
+
+    ```java
+    @Service
+    @Transactional
+    public class UserServiceImpl implements UserService {
+    
+    	@Autowired
+    	private UserDao userDao;
+    
+    	@Override
+    	public void register(User user) {
+    		user.setId(UUID.randomUUID().toString());
+    		userDao.register(user);
+    	}
+    }
+    ```
+
+- UserDao
+
+  ```java
+  public interface UserDao {
+  	void register(User user);
+  }
+  ```
+
+- UserDaoMapper.xml
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8" ?>
+          <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+  <mapper namespace="com.whc.dao.UserDao">
+  <!--注册-->
+  <insert id="register" parameterType="com.whc.entity.User">
+          insert into t_user values(#{id}, #{username}, #{realname}, #{password}, #{sex})
+      </insert>
+  </mapper>
+  ```
+
+
+
+# 五、用户登录功能
+
+- UserController
+
+  ```java
+  // 登录方法
+  	@PostMapping("/login")
+  	public String login(String username, String password) {
+  		User login = userService.login(username, password);
+  		if(login != null) {
+  			return "redirect:/emp/findAll"; // 跳转到查询所有
+  		} else {
+  			return "redirect:/index"; // 跳转回到登录
+  		}
+  	}
+  
+  ```
+
+- UserService
+
+  ```java
+  User login(String username, String password);
+  ```
+
+  - UserServiceImpl
+
+    ```java
+    @Override
+    public User login(String username, String password) {
+    	return userDao.login(username, password);
+    }
+    ```
+
+- UserDao
+
+  ```java
+  User login(@Param("username") String username, @Param("password") String password);
+  ```
+
+- UserDaoMapper.xml
+
+  ```xml
+  <!--登录方法-->
+      <select id="login" resultType="com.whc.entity.User">
+          select id,username,realname,password,sex from t_user
+          where username = #{username} and password = #{password}
+      </select>
+  ```
+
+
+
+# 六、员工的查询所有
+
+- Emp.java
+
+  ```java
+  @Data
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public class Emp {
+  	private String id;
+  	private String name;
+  	private Double salary;
+  	private Integer age;
+  	private Date bir;
+  }
+  ```
+
+- EmpController
+
+  ```java
+  @Controller
+  @RequestMapping("/emp")
+  public class EmpController {
+  	@Autowired
+  	private EmpService empService;
+  
+  	@GetMapping("/findAll")
+  	public String findAll(Model model) {
+  		List<Emp> emps = empService.findAll();
+  		model.addAttribute("emps", emps);
+  		return "ems/emplist";
+  	}
+  }
+  ```
+
+- EmpService
+
+  ```java
+  public interface EmpService {
+  	List<Emp> findAll();
+  }
+  ```
+
+  - EmpServiceImpl
+
+    ```java
+    @Service
+    @Transactional
+    public class EmpServiceImpl implements EmpService {
+    
+    	@Autowired
+    	private EmpDao empDao;
+    
+    	@Override
+    	// 如果存在一个事务，支持当前事务。如果没有事务，则非事务的执行
+    	@Transactional(propagation = Propagation.SUPPORTS)
+    	public List<Emp> findAll() {
+    		return empDao.findAll();
+    	}
+    }
+    ```
+
+- EmpDao
+
+  ```java
+  public interface EmpDao {
+  	List<Emp> findAll();
+  }
+  ```
+
+- EmpDaoMapper.xml
+
+  ```java
+  <?xml version="1.0" encoding="UTF-8" ?>
+          <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+  <mapper namespace="com.whc.dao.EmpDao">
+      <!--查询所有员工方法 -->
+      <select id="findAll" resultType="com.whc.entity.Emp">
+          select id,name,salary,age,bir from t_emp
+      </select>
+  </mapper>
+  ```
+
+# 七、员工添加功能
+
+- EmpController
+
+  ```java
+  @GetMapping("/findAll")
+  public String findAll(Model model) {
+      List<Emp> emps = empService.findAll();
+      model.addAttribute("emps", emps);
+      return "ems/emplist";
+  }
+  ```
+
+- EmpService
+
+  ```java
+  void save(Emp emp);
+  ```
+
+  - EmpServiceImpl
+
+    ```java
+    @Override
+    public void save(Emp emp) {
+        emp.setId(UUID.randomUUID().toString());
+        empDao.saveEmp(emp);
+    }
+    ```
+
+- EmpDao
+
+  ```java
+  void saveEmp(Emp emp);
+  ```
+
+- EmpDaoMapper.xml
+
+  ```xml
+   <insert id="saveEmp" parameterType="com.whc.entity.Emp">
+          insert into t_emp values(#{id}, #{name}, #{salary}, #{age}, #{bir})
+      </insert>
+  ```
+
+  
+
+# 八、员工修改功能
+
+- emplist.html
+
+  ```html
+  <td>
+  <a th:href="@{/emp/delete(id=${emp.id})}">删除信息</a>&nbsp;
+  <a th:href="@{/emp/find(id=${emp.id})}">修改信息</a>
+  </td>
+  ```
+
+- EmpController
+
+  ```java
+  // 更新员工信息方法
+  @PostMapping("/update")
+  public String update(Emp emp) {
+      empService.update(emp);
+      return "redirect:/emp/findAll";
+  }
+  
+  // id查询员工
+  @GetMapping("/find")
+  public String find(String id, Model model) {
+      Emp emp = empService.find(id);
+      model.addAttribute("emp", emp);
+      return "/ems/updateEmp";
+  }
+  ```
+
+- EmpService
+
+  ```java
+  Emp find(String id);
+  
+  void update(Emp emp);
+  ```
+
+  - EmpServiceImpl
+
+    ```java
+    @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public Emp find(String id) {
+        return empDao.find(id);
+    }
+    
+    @Override
+    public void update(Emp emp) {
+        empDao.update(emp);
+    }
+    ```
+
+- EmpDaoMapper.xml
+
+  ```xml
+  <select id="find" parameterType="java.lang.String" resultType="com.whc.entity.Emp">
+  select id,name,salary,age,bir from t_emp
+  where id = #{id}
+  </select>
+  
+  <update id="update" parameterType="com.whc.entity.Emp">
+  update t_emp set name = #{name}, salary = #{salary}, age = #{age}, bir = #{bir}
+  where id = #{id}
+  </update>
+  ```
+
+
+
+# 九、上传到Github步骤
+
+- 在项目根目录创建 .gitignore文件,表示提交到git仓库时需要过滤的文件
+
+- 常用Git操作命令
+  - git init
+  - git add .
+  - git commit -m '初步提交'
+  - git remote add origin 远程仓库地址
+  - git pull origin master
+  - git push -u origin master
+

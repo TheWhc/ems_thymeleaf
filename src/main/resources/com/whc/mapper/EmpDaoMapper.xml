@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+        <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.whc.dao.EmpDao">
+    <!--查询所有员工方法 -->
+    <select id="findAll" resultType="com.whc.entity.Emp">
+        select id,name,salary,age,bir from t_emp
+    </select>
+
+    <insert id="saveEmp" parameterType="com.whc.entity.Emp">
+        insert into t_emp values(#{id}, #{name}, #{salary}, #{age}, #{bir})
+    </insert>
+
+    <delete id="delete" parameterType="java.lang.String">
+        delete from t_emp where id = #{id}
+    </delete>
+
+    <select id="find" parameterType="java.lang.String" resultType="com.whc.entity.Emp">
+        select id,name,salary,age,bir from t_emp
+        where id = #{id}
+    </select>
+
+    <update id="update" parameterType="com.whc.entity.Emp">
+        update t_emp set name = #{name}, salary = #{salary}, age = #{age}, bir = #{bir}
+        where id = #{id}
+    </update>
+</mapper>
